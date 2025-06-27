@@ -1,9 +1,9 @@
 import httpx
 from typing import List, Dict, Any
 import socket
+from .api_keys import BAIDU_API_KEY
 
 # 百度千帆AI搜索API配置
-BAIDU_API_KEY = "bce-v3/ALTAK-ffzC5IdVIHBggzMr79IkT/ecbac2c80eb73bb3288fa050c8c3921b69d0708f"
 BAIDU_SEARCH_URL = "https://qianfan.baidubce.com/v2/ai_search/chat/completions"
 
 def test_network_connectivity():

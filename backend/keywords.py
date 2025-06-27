@@ -6,10 +6,7 @@ from typing import List
 import jieba.analyse
 import json
 from openai import OpenAI
-
-# DeepSeek API配置
-DEEPSEEK_API_KEY = "sk-f7dadf974953406ba145ac0374be3db4"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+from .api_keys import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL
 
 # 加载停用词
 def load_stopwords():
