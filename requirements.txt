@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+httpx
+scikit-learn
+jieba
+langchain
+langchain-community
+langchain-core
+python-dotenv 
