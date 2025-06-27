@@ -6,7 +6,7 @@ from typing import List
 import jieba.analyse
 import json
 from openai import OpenAI
-from .api_keys import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL
+from api_keys import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL
 
 # 加载停用词
 def load_stopwords():
@@ -86,25 +86,33 @@ async def generate_keywords_deepseek(text: str, count: int = 5) -> List[str]:
             base_url=DEEPSEEK_BASE_URL
         )
         
-        prompt = f"""基于以下文本，生成{count}个相关的搜索关键词。关键词应该：
-1. 与原文内容高度相关
-2. 适合用于网络搜索
-3. 包含核心概念和重要术语
-4. 长度适中（2-6个字符）
+        prompt = f"""基于以下关键词或主题，生成{count}个发散但相关的搜索关键词。
 
-原文：{text}
+要求：
+1. 关键词应该与主题高度相关，但不要局限于简单的同义词
+2. 考虑主题的各个方面、相关概念、影响因素、应用场景等
+3. 关键词应该具有搜索价值，能够找到相关内容
+4. 长度适中（2-8个字符）
+5. 避免过于宽泛或过于具体的词汇
+
+示例：
+- 如果主题是"保研"，可以生成：导师、均绩、挂科、科研、竞赛、夏令营、推免、面试等
+- 如果主题是"微积分"，可以生成：导数、积分、极限、微分方程、数学分析、高等数学等
+- 如果主题是"人工智能"，可以生成：机器学习、深度学习、神经网络、算法、数据科学等
+
+主题：{text}
 
 请只返回关键词列表，每行一个关键词，不要其他解释："""
 
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
-                {"role": "system", "content": "你是一个专业的关键词生成助手，能够根据文本内容生成相关的搜索关键词。"},
+                {"role": "system", "content": "你是一个专业的关键词生成助手，能够根据主题生成发散但相关的搜索关键词。你善于从不同角度思考主题，生成有价值的搜索词。"},
                 {"role": "user", "content": prompt}
             ],
             stream=False,
-            temperature=0.7,
-            max_tokens=200
+            temperature=0.8,  # 提高温度以获得更多样化的结果
+            max_tokens=300
         )
         
         print(f"DeepSeek API调用成功")
@@ -132,13 +140,21 @@ async def generate_keywords_deepseek_httpx(text: str, count: int = 5) -> List[st
         "Content-Type": "application/json"
     }
     
-    prompt = f"""基于以下文本，生成{count}个相关的搜索关键词。关键词应该：
-1. 与原文内容高度相关
-2. 适合用于网络搜索
-3. 包含核心概念和重要术语
-4. 长度适中（2-6个字符）
+    prompt = f"""基于以下关键词或主题，生成{count}个发散但相关的搜索关键词。
 
-原文：{text}
+要求：
+1. 关键词应该与主题高度相关，但不要局限于简单的同义词
+2. 考虑主题的各个方面、相关概念、影响因素、应用场景等
+3. 关键词应该具有搜索价值，能够找到相关内容
+4. 长度适中（2-8个字符）
+5. 避免过于宽泛或过于具体的词汇
+
+示例：
+- 如果主题是"保研"，可以生成：导师、均绩、挂科、科研、竞赛、夏令营、推免、面试等
+- 如果主题是"微积分"，可以生成：导数、积分、极限、微分方程、数学分析、高等数学等
+- 如果主题是"人工智能"，可以生成：机器学习、深度学习、神经网络、算法、数据科学等
+
+主题：{text}
 
 请只返回关键词列表，每行一个关键词，不要其他解释："""
 
@@ -150,8 +166,8 @@ async def generate_keywords_deepseek_httpx(text: str, count: int = 5) -> List[st
                 "content": prompt
             }
         ],
-        "temperature": 0.7,
-        "max_tokens": 200
+        "temperature": 0.8,  # 提高温度以获得更多样化的结果
+        "max_tokens": 300
     }
     
     try:
@@ -250,5 +266,73 @@ def extract_keywords_tfidf(origin_keyword: str, texts: list, top_k: int = 5):
 
 # 保持向后兼容
 def extract_keywords(origin_keyword: str, texts: list, top_k: int = 5):
-    """保持原有接口，但内部使用改进的方法"""
+    """提取关键词的主函数"""
     return extract_keywords_tfidf(origin_keyword, texts, top_k)
+
+async def generate_summary_deepseek(content: str, max_length: int = 200) -> str:
+    """使用DeepSeek API生成内容概括"""
+    try:
+        print(f"正在调用DeepSeek API生成概括...")
+        
+        # 使用OpenAI SDK方式调用DeepSeek API
+        client = OpenAI(
+            api_key=DEEPSEEK_API_KEY,
+            base_url=DEEPSEEK_BASE_URL
+        )
+        
+        prompt = f"""请对以下内容进行概括，要求：
+1. 概括要简洁明了，突出重点
+2. 保持原文的核心信息和主要观点
+3. 概括长度控制在{max_length}字以内
+4. 使用客观的语言，避免主观评价
+
+原文内容：
+{content}
+
+请直接返回概括内容，不要添加其他解释："""
+
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": "你是一个专业的内容概括助手，能够准确、简洁地概括文本内容。"},
+                {"role": "user", "content": prompt}
+            ],
+            stream=False,
+            temperature=0.3,
+            max_tokens=500
+        )
+        
+        print(f"DeepSeek API调用成功")
+        summary = response.choices[0].message.content
+        print(f"DeepSeek API返回概括: {summary}")
+        
+        return summary.strip() if summary else "概括生成失败"
+        
+    except Exception as e:
+        print(f"DeepSeek概括生成失败: {e}")
+        print(f"错误类型: {type(e)}")
+        # 降级到简单概括
+        return generate_summary_simple(content, max_length)
+
+def generate_summary_simple(content: str, max_length: int = 200) -> str:
+    """简单的概括功能（降级方案）"""
+    try:
+        # 简单的概括逻辑：取前几句话
+        sentences = content.split('。')
+        summary = ""
+        for sentence in sentences:
+            if len(summary + sentence) <= max_length:
+                summary += sentence + "。"
+            else:
+                break
+        
+        if not summary:
+            # 如果句子太长，直接截取
+            summary = content[:max_length] + "..."
+        
+        print(f"简单概括生成: {summary}")
+        return summary
+        
+    except Exception as e:
+        print(f"简单概括生成失败: {e}")
+        return "概括生成失败"

@@ -1,13 +1,16 @@
 import React, { useState } from 'react'
 import SearchInterface from './components/SearchInterface'
 import SearchTree from './components/SearchTree'
-import { SearchNode } from './types'
+import { SearchNode, CollectedItem, SearchSource } from './types'
 
 function App() {
   const [searchTree, setSearchTree] = useState<SearchNode[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [collectedItems, setCollectedItems] = useState<CollectedItem[]>([])
+  const [integrationLoading, setIntegrationLoading] = useState(false)
+  const [integrationResult, setIntegrationResult] = useState<string>('')
 
-  const handleSearch = async (keyword: string) => {
+  const handleSearch = async (keyword: string, searchSource: SearchSource) => {
     setIsLoading(true)
     try {
       const response = await fetch('http://localhost:8000/search', {
@@ -18,7 +21,8 @@ function App() {
         body: JSON.stringify({
           keyword,
           max_results: 5,
-          generate_keywords_count: 5
+          generate_keywords_count: 5,
+          search_source: searchSource
         })
       })
 
@@ -34,7 +38,8 @@ function App() {
           timestamp: new Date().toISOString(),
           isExpanded: false,
           hasSearched: true,
-          isLoading: false
+          isLoading: false,
+          searchSource: searchSource
         }
 
         setSearchTree(prev => [...prev, newNode])
@@ -49,9 +54,77 @@ function App() {
     }
   }
 
+  const handleCollectItem = (item: CollectedItem) => {
+    setCollectedItems(prev => {
+      // 检查是否已经收藏过
+      const existingIndex = prev.findIndex(existing => existing.id === item.id)
+      if (existingIndex >= 0) {
+        // 如果已存在，则移除（取消收藏）
+        return prev.filter((_, index) => index !== existingIndex)
+      } else {
+        // 如果不存在，则添加
+        return [...prev, item]
+      }
+    })
+  }
+
+  const handleIntegrateCollections = async () => {
+    if (collectedItems.length === 0) {
+      alert('没有收藏的内容可以集合')
+      return
+    }
+
+    setIntegrationLoading(true)
+    setIntegrationResult('')
+
+    try {
+      const response = await fetch('http://localhost:8000/integrate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: collectedItems.map(item => ({
+            title: item.title,
+            content: item.content
+          })),
+          keyword: '收藏内容集合'
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setIntegrationResult(data.integration)
+      } else {
+        setIntegrationResult(`集合失败: ${data.message}`)
+      }
+    } catch (error) {
+      setIntegrationResult('网络错误，请稍后重试')
+    } finally {
+      setIntegrationLoading(false)
+    }
+  }
+
   const handleExpandNode = async (nodeId: string, keyword: string) => {
     setIsLoading(true)
     try {
+      // 获取父节点的搜索源
+      const getParentSearchSource = (nodes: SearchNode[], targetId: string): string => {
+        for (const node of nodes) {
+          if (node.id === targetId) {
+            return node.searchSource
+          }
+          const childResult = getParentSearchSource(node.children, targetId)
+          if (childResult) {
+            return childResult
+          }
+        }
+        return 'baidu' // 默认值
+      }
+      
+      const searchSource = getParentSearchSource(searchTree, nodeId) as SearchSource
+
       const response = await fetch('http://localhost:8000/search', {
         method: 'POST',
         headers: {
@@ -60,7 +133,8 @@ function App() {
         body: JSON.stringify({
           keyword,
           max_results: 3,
-          generate_keywords_count: 3
+          generate_keywords_count: 3,
+          search_source: searchSource
         })
       })
 
@@ -76,7 +150,8 @@ function App() {
           timestamp: new Date().toISOString(),
           isExpanded: false,
           hasSearched: true,
-          isLoading: false
+          isLoading: false,
+          searchSource: searchSource
         }
         
         setSearchTree(prev => {
@@ -128,6 +203,22 @@ function App() {
     })
 
     try {
+      // 获取当前节点的搜索源
+      const getNodeSearchSource = (nodes: SearchNode[], targetId: string): string => {
+        for (const node of nodes) {
+          if (node.id === targetId) {
+            return node.searchSource
+          }
+          const childResult = getNodeSearchSource(node.children, targetId)
+          if (childResult) {
+            return childResult
+          }
+        }
+        return 'baidu' // 默认值
+      }
+      
+      const searchSource = getNodeSearchSource(searchTree, nodeId) as SearchSource
+
       const response = await fetch('http://localhost:8000/search', {
         method: 'POST',
         headers: {
@@ -136,7 +227,8 @@ function App() {
         body: JSON.stringify({
           keyword,
           max_results: 5,
-          generate_keywords_count: 5
+          generate_keywords_count: 5,
+          search_source: searchSource
         })
       })
 
@@ -215,6 +307,10 @@ function App() {
             <SearchInterface 
               onSearch={handleSearch} 
               isLoading={isLoading}
+              collectedItems={collectedItems}
+              onIntegrateCollections={handleIntegrateCollections}
+              integrationLoading={integrationLoading}
+              integrationResult={integrationResult}
             />
           </div>
 
@@ -240,6 +336,7 @@ function App() {
               onViewResults={handleViewResults}
               onRefreshSearch={handleRefreshSearch}
               isLoading={isLoading}
+              onCollectItem={handleCollectItem}
             />
           </div>
         </div>

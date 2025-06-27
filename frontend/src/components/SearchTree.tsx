@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ChevronRight, ExternalLink, Clock, Tag, Search, Eye, RefreshCw } from 'lucide-react'
+import { ChevronRight, ExternalLink, Clock, Tag, Search, Eye, RefreshCw, Globe, MessageSquare } from 'lucide-react'
 import { SearchNode } from '../types'
 import SearchResultDetail from './SearchResultDetail'
 
@@ -9,9 +9,10 @@ interface SearchTreeProps {
   onViewResults: (nodeId: string) => void
   onRefreshSearch: (nodeId: string, keyword: string) => void
   isLoading: boolean
+  onCollectItem: (item: any) => void
 }
 
-const SearchTree: React.FC<SearchTreeProps> = ({ nodes, onExpandNode, onViewResults, onRefreshSearch, isLoading }) => {
+const SearchTree: React.FC<SearchTreeProps> = ({ nodes, onExpandNode, onViewResults, onRefreshSearch, isLoading, onCollectItem }) => {
   const [detailNode, setDetailNode] = useState<SearchNode | null>(null)
 
   // 将树状结构转换为层级结构
@@ -71,9 +72,30 @@ const SearchTree: React.FC<SearchTreeProps> = ({ nodes, onExpandNode, onViewResu
               <div className="bg-white rounded-lg border-2 border-blue-200 p-4 shadow-sm hover:shadow-md transition-shadow">
                 {/* 关键词标题 */}
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">
-                    {item.keyword}
-                  </h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      {item.keyword}
+                    </h3>
+                    <div className="flex items-center mt-1">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        item.node.searchSource === 'baidu' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {item.node.searchSource === 'baidu' ? (
+                          <>
+                            <Globe className="w-3 h-3 mr-1" />
+                            百度搜索
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare className="w-3 h-3 mr-1" />
+                            CC98论坛
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex items-center text-xs text-gray-500">
                     <Clock className="w-3 h-3 mr-1" />
                     {new Date(item.node.timestamp).toLocaleTimeString()}
@@ -198,7 +220,9 @@ const SearchTree: React.FC<SearchTreeProps> = ({ nodes, onExpandNode, onViewResu
         <SearchResultDetail
           results={detailNode.searchResults}
           keyword={detailNode.keyword}
+          nodeId={detailNode.id}
           onClose={() => setDetailNode(null)}
+          onCollectItem={onCollectItem}
         />
       )}
     </>

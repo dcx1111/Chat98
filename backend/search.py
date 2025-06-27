@@ -1,7 +1,7 @@
 import httpx
 from typing import List, Dict, Any
 import socket
-from .api_keys import BAIDU_API_KEY
+from api_keys import BAIDU_API_KEY
 
 # 百度千帆AI搜索API配置
 BAIDU_SEARCH_URL = "https://qianfan.baidubce.com/v2/ai_search/chat/completions"

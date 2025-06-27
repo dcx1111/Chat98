@@ -123,4 +123,16 @@ jspm_packages/
 
 # Temporary folders
 tmp/
-temp/ 
+temp/
+
+# API configuration files (contain sensitive data)
+backend/cc98_config.py
+backend/api_keys.py
+
+# Build outputs
+frontend/dist/
+frontend/build/
+
+# Temporary files
+*.tmp
+*.temp 
